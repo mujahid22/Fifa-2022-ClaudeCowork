@@ -1,0 +1,709 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>Qatar 2022 — World Cup Tournament Dashboard</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.5.0/dist/chart.umd.js" crossorigin="anonymous"></script>
+<style>
+:root{
+  color-scheme: light;
+  --bg:#f5f1e8;
+  --bg2:#faf6ea;
+  --paper:#ffffff;
+  --ink:#1a1c2c;
+  --ink2:#4a4e6a;
+  --muted:#8a8da6;
+  --line:#e5dfce;
+  --gold:#c8a25c;
+  --gold-2:#a3792a;
+  --maroon:#7a0826;
+  --maroon-2:#52051a;
+  --sand:#e8d8b0;
+  --sand-2:#d4b87a;
+  --grass:#2f7d4f;
+  --shadow: 0 8px 28px rgba(82, 5, 26, 0.08);
+}
+*{box-sizing:border-box}
+html,body{margin:0;background:linear-gradient(180deg, #faf6ea 0%, #f5f1e8 100%); color:var(--ink);
+  font-family:-apple-system,BlinkMacSystemFont,"Inter","Segoe UI",Roboto,Helvetica,sans-serif;}
+body{padding:18px clamp(14px,3vw,32px) 60px;}
+
+.hero{
+  position:relative;overflow:hidden;border-radius:20px;
+  background: radial-gradient(circle at 85% 0%, #c8a25c 0%, transparent 40%),
+              linear-gradient(135deg, #52051a 0%, #7a0826 50%, #2b0214 100%);
+  color:#fff;padding:30px 32px 36px;box-shadow:var(--shadow);
+}
+.hero::after{content:""; position:absolute; right:-50px; top:-50px; width:300px; height:300px;
+  background: radial-gradient(circle, rgba(200,162,92,.4) 0%, transparent 60%); pointer-events:none;}
+.hero .crest{position:absolute; right:24px; top:24px; width:90px; height:90px; opacity:.85;}
+.hero .label{font-size:11px;letter-spacing:.3em;text-transform:uppercase;color:#e8d8b0;margin-bottom:8px;}
+.hero h1{margin:0;font-size:clamp(28px,3.4vw,42px);letter-spacing:-.02em;font-weight:800;}
+.hero h1 .accent{color:var(--gold);}
+.hero p{margin:8px 0 0;color:#e8d8b0;max-width:60ch;line-height:1.5;}
+.hero .stripe{position:absolute;left:0;right:0;bottom:0;height:5px;
+  background: linear-gradient(90deg, #c8a25c 0%, #c8a25c 25%, #fff 25%, #fff 50%, #2f7d4f 50%, #2f7d4f 75%, #7a0826 75%, #7a0826 100%);}
+
+.filter-bar{display:flex;flex-wrap:wrap;align-items:center;gap:12px;
+  background:#fff;border:1px solid var(--line);border-radius:14px;padding:14px 16px;
+  margin:18px 0 18px;box-shadow: 0 2px 8px rgba(82,5,26,.04);position:sticky;top:6px;z-index:30;}
+.filter-bar label{font-size:11px;letter-spacing:.18em;text-transform:uppercase;color:var(--muted);font-weight:600;}
+.filter-bar select{padding:9px 14px;border-radius:10px;border:1px solid var(--line);background:#fff;
+  font-size:14px;color:var(--ink);min-width:280px;font-weight:500;}
+.filter-bar select:focus{outline:2px solid var(--maroon);outline-offset:1px;}
+.filter-bar .legend{margin-left:auto;font-size:12px;color:var(--muted);}
+.legend-dot{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:5px;vertical-align:middle;}
+
+.section-title{display:flex;align-items:center;gap:14px;margin:28px 0 14px;}
+.section-title h2{margin:0;font-size:20px;letter-spacing:-.01em;color:var(--maroon-2);font-weight:800;}
+.section-title .rule{flex:1;height:1px;background:linear-gradient(90deg, var(--gold), transparent);}
+.card{background:#fff;border:1px solid var(--line);border-radius:14px;padding:18px 20px;box-shadow:var(--shadow);}
+.grid{display:grid;gap:16px;}
+.grid.cols-2{grid-template-columns:1fr 1fr;}
+@media(max-width:980px){.grid.cols-2{grid-template-columns:1fr;}}
+
+.podium{display:grid;grid-template-columns:1fr 1.15fr 1fr;gap:18px;align-items:end;margin-top:8px;}
+.podium .step{background:#fff;border-radius:16px;padding:18px 16px 22px;text-align:center;
+  border:1px solid var(--line);box-shadow:var(--shadow);position:relative;overflow:hidden;}
+.podium .step.first{transform:translateY(-12px);border-color:var(--gold);background:linear-gradient(180deg,#fff 0%,#fdf6e3 100%);}
+.podium .step.first .place-num{color:var(--gold-2);}
+.podium .step.second{background:linear-gradient(180deg,#fff 0%,#f4f4f4 100%);}
+.podium .step.third{background:linear-gradient(180deg,#fff 0%,#f6ebd9 100%);}
+.podium .place-num{font-size:42px;font-weight:900;letter-spacing:-.04em;line-height:1;color:#9a9aa3;}
+.podium .flag{font-size:64px;line-height:1;margin:6px 0 4px;filter:drop-shadow(0 2px 6px rgba(0,0,0,.18));}
+.podium .country{font-size:18px;font-weight:800;margin:4px 0 2px;color:var(--ink);}
+.podium .meta{font-size:12px;color:var(--ink2);}
+.podium .step .ribbon{position:absolute;top:0;left:0;right:0;height:6px;}
+.podium .step.first .ribbon{background:linear-gradient(90deg,#d4a017,#c8a25c,#a3792a);}
+.podium .step.second .ribbon{background:linear-gradient(90deg,#bfbfbf,#dcdcdc,#a8a8a8);}
+.podium .step.third .ribbon{background:linear-gradient(90deg,#c47a3d,#cd7f32,#9b5a23);}
+.trophy-svg{width:42px;height:42px;margin:0 auto 4px;display:block;}
+
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px;margin:14px 0 0;}
+.kpi{background:#fff;border:1px solid var(--line);border-radius:12px;padding:12px 14px;position:relative;}
+.kpi::before{content:"";position:absolute;left:0;top:0;bottom:0;width:3px;border-radius:3px 0 0 3px;background:var(--gold);}
+.kpi .v{font-size:22px;font-weight:800;}
+.kpi .l{font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin-top:2px;}
+
+.awards{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px;}
+.award{background:linear-gradient(135deg,#fff 0%,#fdf6e3 100%);border:1px solid var(--line);border-radius:14px;padding:16px;
+  position:relative;overflow:hidden;}
+.award::after{content:"";position:absolute;right:-30px;bottom:-30px;width:100px;height:100px;
+  background:radial-gradient(circle,rgba(200,162,92,.25) 0%, transparent 70%);}
+.award .icon{width:36px;height:36px;margin-bottom:8px;}
+.award .name{font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--gold-2);font-weight:700;}
+.award .winner{font-size:16px;font-weight:800;margin-top:4px;}
+.award .team{font-size:13px;color:var(--ink2);margin-top:2px;}
+
+.groups{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;}
+@media(max-width:1100px){.groups{grid-template-columns:repeat(2,1fr);}}
+@media(max-width:560px){.groups{grid-template-columns:1fr;}}
+.group{background:#fff;border:1px solid var(--line);border-radius:14px;padding:14px 12px;}
+.group h3{margin:0 0 10px;font-size:13px;letter-spacing:.18em;text-transform:uppercase;color:var(--maroon);}
+.group h3 .pip{display:inline-block;width:24px;height:24px;border-radius:50%;background:var(--maroon);color:#fff;
+  text-align:center;line-height:24px;font-weight:800;margin-right:6px;font-size:12px;letter-spacing:0;}
+.group .row{display:grid;grid-template-columns:18px 22px 1fr auto;gap:6px;align-items:center;
+  padding:5px 4px;border-bottom:1px dashed var(--line);font-size:13px;}
+.group .row:last-child{border-bottom:0;}
+.group .row.advanced{background:linear-gradient(90deg,rgba(200,162,92,.15),transparent);border-radius:5px;}
+.group .pos{color:var(--muted);font-weight:700;font-variant-numeric:tabular-nums;}
+.group .flag{font-size:18px;}
+.group .name{font-weight:600;color:var(--ink);}
+.group .pts{font-weight:800;font-variant-numeric:tabular-nums;color:var(--maroon);}
+.group .miniscore{font-size:11px;color:var(--muted);margin-top:6px;border-top:1px solid var(--line);padding-top:6px;}
+
+.bracket{display:grid;grid-template-columns:repeat(7, minmax(140px,1fr));gap:8px;align-items:stretch;
+  overflow-x:auto;padding:8px 4px;}
+.bracket .col{display:flex;flex-direction:column;justify-content:space-around;gap:8px;}
+.bracket .col-label{font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--muted);text-align:center;margin-bottom:4px;font-weight:700;}
+.bracket .match{background:#fff;border:1px solid var(--line);border-radius:8px;padding:8px 10px;font-size:12px;
+  box-shadow: 0 1px 4px rgba(0,0,0,.04);min-width:130px;}
+.bracket .match .row{display:flex;justify-content:space-between;align-items:center;padding:2px 0;}
+.bracket .match .row.win{font-weight:800;}
+.bracket .match .row.lose{color:var(--muted);}
+.bracket .match .row .flag{font-size:14px;margin-right:4px;}
+.bracket .match .row .score{font-variant-numeric:tabular-nums;font-weight:700;}
+.bracket .match .stage-tag{font-size:9px;color:var(--muted);letter-spacing:.1em;text-transform:uppercase;margin-bottom:4px;}
+.bracket .match.final{background:linear-gradient(180deg,#fdf6e3,#fff);border-color:var(--gold);}
+.bracket .match.final .row.win{color:var(--gold-2);}
+
+.scorers{display:grid;gap:6px;}
+.scorer{display:grid;grid-template-columns:30px auto 1fr 50px;gap:10px;align-items:center;
+  padding:8px 10px;border-radius:8px;}
+.scorer:nth-child(odd){background:#faf6ea;}
+.scorer .rk{font-weight:800;color:var(--maroon);font-variant-numeric:tabular-nums;}
+.scorer .flg{font-size:22px;}
+.scorer .nm{font-weight:600;}
+.scorer .nm small{display:block;color:var(--muted);font-size:11px;font-weight:400;}
+.scorer .gls{text-align:right;font-weight:800;font-size:18px;color:var(--maroon);}
+.scorer .bar{grid-column:1 / -1;height:4px;background:var(--line);border-radius:4px;overflow:hidden;margin-top:-2px;}
+.scorer .bar > div{height:100%;background:linear-gradient(90deg,var(--gold),var(--maroon));}
+
+.stories{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px;}
+.story{background:#fff;border:1px solid var(--line);border-radius:12px;padding:14px;border-left:4px solid var(--maroon);}
+.story h4{margin:0 0 4px;font-size:14px;color:var(--maroon-2);}
+.story .who{font-size:11px;color:var(--muted);letter-spacing:.1em;text-transform:uppercase;}
+.story p{margin:6px 0 0;font-size:13px;color:var(--ink2);line-height:1.5;}
+
+.team-hero{position:relative;overflow:hidden;border-radius:20px;color:#fff;padding:30px;margin-top:8px;
+  background: linear-gradient(135deg, var(--th-c1, #1a1c2c), var(--th-c2, #4a4e6a));box-shadow:var(--shadow);}
+.team-hero::after{content:""; position:absolute; right:-80px; bottom:-80px; width:280px; height:280px; border-radius:50%;
+  background: radial-gradient(circle, rgba(255,255,255,.18) 0%, transparent 60%);}
+.team-hero .row{display:grid;grid-template-columns:auto 1fr auto;gap:20px;align-items:center;}
+.team-hero .flag{font-size:96px;line-height:1;filter:drop-shadow(0 3px 8px rgba(0,0,0,.3));}
+.team-hero .name{font-size:36px;font-weight:900;letter-spacing:-.02em;margin:0;}
+.team-hero .sub{font-size:13px;opacity:.85;margin-top:4px;letter-spacing:.04em;}
+.team-hero .finish{background: rgba(255,255,255,.2);border:1px solid rgba(255,255,255,.35);
+  border-radius:12px;padding:10px 16px;text-align:center;backdrop-filter: blur(4px);}
+.team-hero .finish .place{font-size:32px;font-weight:900;line-height:1;}
+.team-hero .finish .label{font-size:11px;letter-spacing:.16em;text-transform:uppercase;opacity:.85;margin-top:4px;}
+
+.team-stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;margin:14px 0;}
+.team-stat{background:#fff;border:1px solid var(--line);border-radius:12px;padding:12px 14px;}
+.team-stat .l{font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:var(--muted);}
+.team-stat .v{font-size:18px;font-weight:800;margin-top:2px;}
+
+.journey{display:flex;flex-wrap:wrap;gap:8px;}
+.journey .game{display:flex;flex-direction:column;align-items:center;
+  background:#fff;border:1px solid var(--line);border-radius:10px;padding:10px 12px;min-width:150px;flex:1;
+  border-top:3px solid var(--muted);}
+.journey .game.win{border-top-color:var(--grass);background:linear-gradient(180deg,#fff 0%,#f0f8f3 100%);}
+.journey .game.loss{border-top-color:var(--maroon);background:linear-gradient(180deg,#fff 0%,#fbf0f3 100%);}
+.journey .game.draw{border-top-color:var(--gold);background:linear-gradient(180deg,#fff 0%,#fdf6e3 100%);}
+.journey .stage{font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:var(--muted);font-weight:700;}
+.journey .vs{font-size:13px;font-weight:600;margin:6px 0 4px;text-align:center;}
+.journey .score{font-size:18px;font-weight:900;font-variant-numeric:tabular-nums;}
+.journey .res{font-size:11px;text-transform:uppercase;letter-spacing:.16em;font-weight:700;margin-top:4px;}
+.journey .game.win .res{color:var(--grass);}
+.journey .game.loss .res{color:var(--maroon);}
+.journey .game.draw .res{color:var(--gold-2);}
+
+.players-table{width:100%;border-collapse:collapse;font-size:13px;}
+.players-table th,.players-table td{padding:8px 10px;border-bottom:1px solid var(--line);text-align:left;}
+.players-table th{font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);font-weight:700;}
+.players-table td.num,.players-table th.num{text-align:right;font-variant-numeric:tabular-nums;}
+.pos-tag{display:inline-block;padding:2px 8px;border-radius:999px;font-size:10px;font-weight:700;letter-spacing:.04em;}
+.pos-tag.GK{background:#fef2c4;color:#84621a;}
+.pos-tag.DEF{background:#dceefb;color:#1c537e;}
+.pos-tag.MID{background:#dcecde;color:#1f5d3b;}
+.pos-tag.FWD{background:#fbdce1;color:#7a0826;}
+.captain-mark{color:var(--gold-2);font-weight:900;margin-right:4px;}
+
+.achievements{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px;margin-top:8px;}
+.ach{background:#fff;border:1px solid var(--line);border-radius:12px;padding:12px 14px;border-left:3px solid var(--gold);position:relative;}
+.ach .h{font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--gold-2);font-weight:800;}
+.ach p{margin:5px 0 0;font-size:13px;color:var(--ink2);line-height:1.5;}
+
+.map-wrap{background:#fff;border:1px solid var(--line);border-radius:12px;padding:14px;}
+.map-wrap svg{display:block;width:100%;height:auto;}
+.map-pin{fill:var(--maroon);}
+.map-pin-pulse{fill:var(--maroon);opacity:.3;}
+.continents path{fill:#e5dfce;stroke:#fff;stroke-width:.5;}
+
+.chart-wrap{position:relative;height:260px;}
+.hidden{display:none !important;}
+.muted-text{color:var(--muted);font-size:13px;}
+.note{background:#fdf6e3;border-left:3px solid var(--gold);padding:10px 12px;border-radius:6px;
+  font-size:12px;color:var(--ink2);line-height:1.5;}
+</style>
+</head>
+<body>
+
+<section class="hero">
+  <svg class="crest" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+    <circle cx="50" cy="50" r="46" fill="none" stroke="#c8a25c" stroke-width="2"/>
+    <circle cx="50" cy="50" r="38" fill="none" stroke="#c8a25c" stroke-width="1" opacity=".5"/>
+    <text x="50" y="44" text-anchor="middle" fill="#c8a25c" font-size="9" letter-spacing="1.5" font-family="serif">FIFA</text>
+    <text x="50" y="58" text-anchor="middle" fill="#c8a25c" font-size="11" font-weight="bold" font-family="serif">QATAR</text>
+    <text x="50" y="70" text-anchor="middle" fill="#c8a25c" font-size="9" letter-spacing="1.5" font-family="serif">2022</text>
+  </svg>
+  <div class="label">FIFA World Cup &middot; 20 Nov &ndash; 18 Dec 2022</div>
+  <h1>Qatar 2022 &mdash; <span class="accent">Tournament Dashboard</span></h1>
+  <p>32 nations, 64 matches, 172 goals, 8 stadia, and a final that became one of the greatest matches ever played. Squads, captains and FIFA rankings come from the <code style="background:rgba(255,255,255,.12);padding:1px 6px;border-radius:4px;color:#fff">Fifa2024</code> Postgres database; tournament outcomes are added from the public match record.</p>
+  <div class="stripe"></div>
+</section>
+
+<div class="filter-bar">
+  <label for="team-select">Drill into team</label>
+  <select id="team-select"></select>
+  <span class="legend">
+    <span class="legend-dot" style="background:#2f7d4f"></span>Win
+    <span class="legend-dot" style="background:#c8a25c;margin-left:10px;"></span>Draw
+    <span class="legend-dot" style="background:#7a0826;margin-left:10px;"></span>Loss
+  </span>
+</div>
+
+<div id="overview-view">
+  <div class="section-title"><h2>The Final Podium</h2><div class="rule"></div></div>
+  <div class="podium">
+    <div class="step second"><div class="ribbon"></div><div class="place-num">2</div>
+      <div class="flag">&#x1F1EB;&#x1F1F7;</div><div class="country">France</div>
+      <div class="meta">Lost final 4-2 on pens (3-3)</div></div>
+    <div class="step first"><div class="ribbon"></div>
+      <svg class="trophy-svg" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+        <path d="M20 8 H44 V20 C44 30 38 36 32 36 C26 36 20 30 20 20 Z" fill="#c8a25c"/>
+        <path d="M14 12 C8 12 8 22 14 22" stroke="#c8a25c" stroke-width="3" fill="none"/>
+        <path d="M50 12 C56 12 56 22 50 22" stroke="#c8a25c" stroke-width="3" fill="none"/>
+        <rect x="28" y="36" width="8" height="10" fill="#c8a25c"/>
+        <rect x="22" y="46" width="20" height="6" rx="2" fill="#a3792a"/>
+        <rect x="18" y="52" width="28" height="4" rx="1" fill="#7a5818"/></svg>
+      <div class="place-num">1</div><div class="flag">&#x1F1E6;&#x1F1F7;</div>
+      <div class="country">Argentina</div><div class="meta">3rd star &middot; 4-2 pen win after 3-3</div></div>
+    <div class="step third"><div class="ribbon"></div><div class="place-num">3</div>
+      <div class="flag">&#x1F1ED;&#x1F1F7;</div><div class="country">Croatia</div>
+      <div class="meta">Beat Morocco 2-1 for bronze</div></div>
+  </div>
+
+  <div class="kpis">
+    <div class="kpi"><div class="v">32</div><div class="l">Nations</div></div>
+    <div class="kpi"><div class="v">64</div><div class="l">Matches</div></div>
+    <div class="kpi"><div class="v">172</div><div class="l">Goals (2.69 / match)</div></div>
+    <div class="kpi"><div class="v">8</div><div class="l">Stadia</div></div>
+    <div class="kpi"><div class="v">3.4M</div><div class="l">Stadium attendance</div></div>
+    <div class="kpi"><div class="v">5B</div><div class="l">Global viewers</div></div>
+  </div>
+
+  <div class="section-title"><h2>Individual Awards</h2><div class="rule"></div></div>
+  <div class="awards">
+    <div class="award"><svg class="icon" viewBox="0 0 32 32"><path d="M16 4 L18 12 L26 12 L20 17 L22 25 L16 20 L10 25 L12 17 L6 12 L14 12 Z" fill="#c8a25c"/></svg>
+      <div class="name">Golden Ball</div><div class="winner">Lionel Messi</div>
+      <div class="team">&#x1F1E6;&#x1F1F7; Argentina &middot; Best Player</div></div>
+    <div class="award"><svg class="icon" viewBox="0 0 32 32"><circle cx="16" cy="16" r="11" fill="#fff" stroke="#1a1c2c" stroke-width="2"/><polygon points="16,9 21,13 19,19 13,19 11,13" fill="#1a1c2c"/></svg>
+      <div class="name">Golden Boot</div><div class="winner">Kylian Mbapp&eacute;</div>
+      <div class="team">&#x1F1EB;&#x1F1F7; France &middot; 8 goals</div></div>
+    <div class="award"><svg class="icon" viewBox="0 0 32 32"><path d="M6 8 H26 V20 C26 23 24 24 22 24 H10 C8 24 6 23 6 20 Z" fill="#c8a25c"/><path d="M10 10 L10 6 H22 L22 10" stroke="#c8a25c" stroke-width="2" fill="none"/></svg>
+      <div class="name">Golden Glove</div><div class="winner">Emiliano Mart&iacute;nez</div>
+      <div class="team">&#x1F1E6;&#x1F1F7; Argentina &middot; Best Goalkeeper</div></div>
+    <div class="award"><svg class="icon" viewBox="0 0 32 32"><circle cx="16" cy="16" r="12" fill="#c8a25c"/><path d="M16 8 V16 L21 19" stroke="#fff" stroke-width="2" fill="none" stroke-linecap="round"/></svg>
+      <div class="name">Best Young Player</div><div class="winner">Enzo Fern&aacute;ndez</div>
+      <div class="team">&#x1F1E6;&#x1F1F7; Argentina &middot; Age 21</div></div>
+    <div class="award"><svg class="icon" viewBox="0 0 32 32"><path d="M16 4 C20 4 24 8 24 14 V22 H8 V14 C8 8 12 4 16 4 Z" fill="#2f7d4f"/></svg>
+      <div class="name">Fair Play Award</div><div class="winner">England</div>
+      <div class="team">Best disciplinary record</div></div>
+  </div>
+
+  <div class="section-title"><h2>Group Stage &mdash; Final Standings</h2><div class="rule"></div></div>
+  <div class="groups" id="groups-grid"></div>
+
+  <div class="section-title"><h2>Knockout Bracket</h2><div class="rule"></div></div>
+  <div class="card" style="overflow-x:auto;"><div class="bracket" id="bracket"></div></div>
+
+  <div class="grid cols-2" style="margin-top:20px;">
+    <div class="card"><div class="section-title" style="margin-top:0;"><h2>Top Scorers</h2><div class="rule"></div></div>
+      <div class="scorers" id="scorers"></div></div>
+    <div class="card"><div class="section-title" style="margin-top:0;"><h2>Defining Storylines</h2><div class="rule"></div></div>
+      <div class="stories">
+        <div class="story"><div class="who">Saudi Arabia vs Argentina &middot; Group C</div><h4>The Saudi Shock</h4>
+          <p>Saudi Arabia, ranked 51st, beat eventual champions Argentina 2&ndash;1 in the opening round &mdash; one of the greatest upsets in World Cup history.</p></div>
+        <div class="story"><div class="who">Morocco &middot; Semi-final</div><h4>Africa's Historic First</h4>
+          <p>Morocco became the <strong>first African and first Arab nation</strong> to reach a World Cup semi-final, eliminating Belgium, Spain (pens) and Portugal along the way.</p></div>
+        <div class="story"><div class="who">Japan &middot; Group E</div><h4>Japan's Comeback Doubles</h4>
+          <p>Japan beat both Germany and Spain 2&ndash;1 from a goal down to top a group of giants &mdash; sending Germany out of the group stage for the second WC running.</p></div>
+        <div class="story"><div class="who">Final &middot; 18 Dec</div><h4>The Greatest Final</h4>
+          <p>Mbapp&eacute;'s hat-trick forced a 3&ndash;3 draw with Messi-led Argentina. Argentina won the shoot-out 4&ndash;2; Mbapp&eacute; took the Golden Boot with 8 goals, Messi took the trophy.</p></div>
+        <div class="story"><div class="who">Belgium &middot; Group F</div><h4>The #2's Group Exit</h4>
+          <p>FIFA's #2-ranked side crashed out of the group, beaten 2&ndash;0 by Morocco and held by Croatia &mdash; ending the "golden generation" without a deep run.</p></div>
+        <div class="story"><div class="who">Croatia &middot; Bracket</div><h4>Penalty Specialists Again</h4>
+          <p>Croatia beat Japan and Brazil on penalties to reach a second consecutive medal &mdash; Modri&cacute;'s bronze ball at age 37 capped a remarkable cycle.</p></div>
+      </div></div>
+  </div>
+
+  <div class="section-title" style="margin-top:24px;"><h2>Squad Composition Across the 32 Teams</h2><div class="rule"></div></div>
+  <div class="grid cols-2">
+    <div class="card"><h3 style="margin:0 0 4px;font-size:14px;">Average squad age by team</h3>
+      <div class="muted-text" style="margin-bottom:10px;">From the <code>wc2022_squads</code> table.</div>
+      <div class="chart-wrap" style="height:420px"><canvas id="ch-age"></canvas></div></div>
+    <div class="card"><h3 style="margin:0 0 4px;font-size:14px;">Where the players' clubs play</h3>
+      <div class="muted-text" style="margin-bottom:10px;">Top 10 leagues by # of Qatar 2022 squad members (from DB).</div>
+      <div class="chart-wrap" style="height:420px"><canvas id="ch-leagues"></canvas></div></div>
+  </div>
+</div>
+
+<div id="team-view" class="hidden">
+  <div class="team-hero" id="team-hero"></div>
+  <div class="team-stats" id="team-stats"></div>
+
+  <div class="grid cols-2" style="margin-top:8px;">
+    <div class="card"><div class="section-title" style="margin-top:0;"><h2>The Tournament Journey</h2><div class="rule"></div></div>
+      <div class="journey" id="team-journey"></div></div>
+    <div class="card"><div class="section-title" style="margin-top:0;"><h2>Country Position</h2><div class="rule"></div></div>
+      <div class="map-wrap" id="team-map"></div></div>
+  </div>
+
+  <div class="grid cols-2" style="margin-top:16px;">
+    <div class="card"><div class="section-title" style="margin-top:0;"><h2>Star Players (top 5 by intl goals)</h2><div class="rule"></div></div>
+      <table class="players-table" id="team-players"><thead><tr>
+        <th>Player</th><th>Pos</th><th class="num">Age</th><th>Club</th><th class="num">Caps</th><th class="num">Intl Gls</th>
+      </tr></thead><tbody></tbody></table>
+      <div class="muted-text" style="margin-top:8px;">Intl goals = career international goals at the time of the squad announcement (<code>wc2022_squads</code>).</div></div>
+    <div class="card"><div class="section-title" style="margin-top:0;"><h2>Squad by Position</h2><div class="rule"></div></div>
+      <div class="chart-wrap"><canvas id="team-pos-chart"></canvas></div></div>
+  </div>
+
+  <div class="card" style="margin-top:16px;"><div class="section-title" style="margin-top:0;"><h2>Key Achievements &amp; Notes</h2><div class="rule"></div></div>
+    <div class="achievements" id="team-achievements"></div></div>
+</div>
+
+<div class="note" style="margin-top:24px;">
+  <strong>Data sources.</strong> Squad players, ages, captains, club &amp; league info, and FIFA rankings come directly from the <code>wc2022_squads</code> and <code>wc2022_groups</code> tables in the <code>Fifa2024</code> Postgres database. Match results, group standings, knockout outcomes, top scorers and individual awards are added from public records. Country flags are Unicode emoji; FIFA logos and the official mascot are not used (trademarked).
+</div>
+
+<script>
+const TEAM_SQUAD = {
+  "Argentina":{gk:3,def:8,mid:8,fwd:7,total:26,avgAge:27.9,foreignPct:96.2},
+  "Australia":{gk:3,def:9,mid:6,fwd:8,total:26,avgAge:27.5,foreignPct:73.1},
+  "Belgium":{gk:3,def:6,mid:8,fwd:9,total:26,avgAge:27.8,foreignPct:80.8},
+  "Brazil":{gk:3,def:8,mid:6,fwd:9,total:26,avgAge:27.9,foreignPct:88.5},
+  "Cameroon":{gk:3,def:8,mid:8,fwd:7,total:26,avgAge:26.3,foreignPct:92.3},
+  "Canada":{gk:3,def:7,mid:10,fwd:6,total:26,avgAge:26.9,foreignPct:61.5},
+  "Costa Rica":{gk:3,def:8,mid:12,fwd:3,total:26,avgAge:27.2,foreignPct:34.6},
+  "Croatia":{gk:3,def:9,mid:8,fwd:6,total:26,avgAge:27.4,foreignPct:76.9},
+  "Denmark":{gk:3,def:9,mid:9,fwd:5,total:26,avgAge:27.2,foreignPct:92.3},
+  "Ecuador":{gk:3,def:9,mid:10,fwd:4,total:26,avgAge:25.6,foreignPct:84.6},
+  "England":{gk:3,def:9,mid:8,fwd:6,total:26,avgAge:26.4,foreignPct:3.8},
+  "France":{gk:3,def:10,mid:5,fwd:8,total:26,avgAge:26.5,foreignPct:76.9},
+  "Germany":{gk:3,def:9,mid:9,fwd:5,total:26,avgAge:26.8,foreignPct:23.1},
+  "Ghana":{gk:3,def:9,mid:10,fwd:4,total:26,avgAge:24.7,foreignPct:92.3},
+  "Iran":{gk:4,def:10,mid:8,fwd:3,total:25,avgAge:28.9,foreignPct:64.0},
+  "Japan":{gk:3,def:8,mid:11,fwd:4,total:26,avgAge:27.8,foreignPct:73.1},
+  "Mexico":{gk:3,def:9,mid:6,fwd:8,total:26,avgAge:28.5,foreignPct:38.5},
+  "Morocco":{gk:3,def:8,mid:10,fwd:5,total:26,avgAge:26.3,foreignPct:88.5},
+  "Netherlands":{gk:3,def:9,mid:7,fwd:7,total:26,avgAge:26.6,foreignPct:53.8},
+  "Poland":{gk:3,def:8,mid:11,fwd:4,total:26,avgAge:27.0,foreignPct:88.5},
+  "Portugal":{gk:3,def:8,mid:8,fwd:7,total:26,avgAge:26.8,foreignPct:73.1},
+  "Qatar":{gk:3,def:8,mid:10,fwd:5,total:26,avgAge:27.0,foreignPct:0.0},
+  "Saudi Arabia":{gk:3,def:8,mid:9,fwd:6,total:26,avgAge:27.3,foreignPct:0.0},
+  "Senegal":{gk:3,def:9,mid:7,fwd:7,total:26,avgAge:26.3,foreignPct:100.0},
+  "Serbia":{gk:3,def:7,mid:10,fwd:6,total:26,avgAge:26.9,foreignPct:96.2},
+  "South Korea":{gk:3,def:9,mid:12,fwd:2,total:26,avgAge:27.8,foreignPct:46.2},
+  "Spain":{gk:3,def:8,mid:7,fwd:8,total:26,avgAge:25.7,foreignPct:30.8},
+  "Switzerland":{gk:4,def:8,mid:10,fwd:4,total:26,avgAge:27.0,foreignPct:80.8},
+  "Tunisia":{gk:4,def:8,mid:7,fwd:7,total:26,avgAge:27.9,foreignPct:69.2},
+  "United States":{gk:3,def:9,mid:6,fwd:8,total:26,avgAge:25.2,foreignPct:65.4},
+  "Uruguay":{gk:3,def:9,mid:8,fwd:6,total:26,avgAge:27.8,foreignPct:88.5},
+  "Wales":{gk:3,def:9,mid:9,fwd:5,total:26,avgAge:26.4,foreignPct:84.6}
+};
+
+const TOP5 = {
+  "Argentina":[{p:"Lionel Messi",cap:true,pos:"FWD",age:35,club:"Paris Saint-Germain",caps:164,g:90},{p:"Ángel Di María",pos:"FWD",age:34,club:"Juventus",caps:123,g:25},{p:"Lautaro Martínez",pos:"FWD",age:25,club:"Internazionale",caps:40,g:21},{p:"Nicolás Otamendi",pos:"DEF",age:34,club:"Benfica",caps:92,g:4},{p:"Leandro Paredes",pos:"MID",age:28,club:"Juventus",caps:45,g:4}],
+  "Australia":[{p:"Mathew Leckie",pos:"FWD",age:31,club:"Melbourne City",caps:73,g:13},{p:"Awer Mabil",pos:"FWD",age:27,club:"Cádiz",caps:29,g:8},{p:"Jamie Maclaren",pos:"FWD",age:29,club:"Melbourne City",caps:26,g:8},{p:"Mitchell Duke",pos:"FWD",age:31,club:"Fagiano Okayama",caps:21,g:8},{p:"Aaron Mooy",pos:"MID",age:32,club:"Celtic",caps:53,g:7}],
+  "Belgium":[{p:"Romelu Lukaku",pos:"FWD",age:29,club:"Internazionale",caps:102,g:68},{p:"Eden Hazard",cap:true,pos:"FWD",age:31,club:"Real Madrid",caps:122,g:33},{p:"Michy Batshuayi",pos:"FWD",age:29,club:"Fenerbahçe",caps:47,g:26},{p:"Kevin De Bruyne",pos:"MID",age:31,club:"Manchester City",caps:93,g:25},{p:"Dries Mertens",pos:"FWD",age:35,club:"Galatasaray",caps:106,g:21}],
+  "Brazil":[{p:"Neymar",pos:"FWD",age:30,club:"Paris Saint-Germain",caps:121,g:75},{p:"Gabriel Jesus",pos:"FWD",age:25,club:"Arsenal",caps:56,g:19},{p:"Richarlison",pos:"FWD",age:25,club:"Tottenham Hotspur",caps:38,g:17},{p:"Dani Alves",pos:"DEF",age:39,club:"UNAM",caps:124,g:8},{p:"Thiago Silva",cap:true,pos:"DEF",age:38,club:"Chelsea",caps:109,g:7}],
+  "Cameroon":[{p:"Vincent Aboubakar",cap:true,pos:"FWD",age:30,club:"Al-Nassr",caps:88,g:33},{p:"Eric Maxim Choupo-Moting",pos:"FWD",age:33,club:"Bayern Munich",caps:68,g:18},{p:"Karl Toko Ekambi",pos:"FWD",age:30,club:"Lyon",caps:50,g:12},{p:"Christian Bassogog",pos:"FWD",age:27,club:"Shanghai Shenhua",caps:42,g:7},{p:"André-Frank Zambo Anguissa",pos:"MID",age:27,club:"Napoli",caps:42,g:5}],
+  "Canada":[{p:"Cyle Larin",pos:"FWD",age:27,club:"Club Brugge",caps:54,g:25},{p:"Jonathan David",pos:"FWD",age:22,club:"Lille",caps:34,g:22},{p:"Lucas Cavallini",pos:"FWD",age:29,club:"Vancouver Whitecaps FC",caps:33,g:17},{p:"Junior Hoilett",pos:"MID",age:32,club:"Reading",caps:49,g:14},{p:"Alphonso Davies",pos:"FWD",age:22,club:"Bayern Munich",caps:34,g:12}],
+  "Costa Rica":[{p:"Bryan Ruiz",cap:true,pos:"MID",age:37,club:"Alajuelense",caps:144,g:29},{p:"Celso Borges",pos:"MID",age:34,club:"Alajuelense",caps:154,g:27},{p:"Joel Campbell",pos:"FWD",age:30,club:"León",caps:118,g:25},{p:"Johan Venegas",pos:"FWD",age:33,club:"Alajuelense",caps:80,g:11},{p:"Francisco Calvo",pos:"DEF",age:30,club:"Konyaspor",caps:75,g:8}],
+  "Croatia":[{p:"Ivan Perišić",pos:"FWD",age:33,club:"Tottenham Hotspur",caps:116,g:32},{p:"Luka Modrić",cap:true,pos:"MID",age:37,club:"Real Madrid",caps:155,g:23},{p:"Andrej Kramarić",pos:"FWD",age:31,club:"1899 Hoffenheim",caps:74,g:20},{p:"Marcelo Brozović",pos:"MID",age:30,club:"Internazionale",caps:77,g:7},{p:"Mario Pašalić",pos:"MID",age:27,club:"Atalanta",caps:43,g:7}],
+  "Denmark":[{p:"Christian Eriksen",pos:"MID",age:30,club:"Manchester United",caps:117,g:39},{p:"Yussuf Poulsen",pos:"FWD",age:28,club:"RB Leipzig",caps:68,g:11},{p:"Kasper Dolberg",pos:"FWD",age:25,club:"Sevilla",caps:37,g:11},{p:"Martin Braithwaite",pos:"FWD",age:31,club:"Espanyol",caps:62,g:10},{p:"Andreas Cornelius",pos:"FWD",age:29,club:"Copenhagen",caps:41,g:9}],
+  "Ecuador":[{p:"Enner Valencia",cap:true,pos:"FWD",age:33,club:"Fenerbahçe",caps:74,g:35},{p:"Michael Estrada",pos:"FWD",age:26,club:"Cruz Azul",caps:35,g:8},{p:"Ángel Mena",pos:"MID",age:34,club:"León",caps:46,g:7},{p:"Gonzalo Plata",pos:"MID",age:22,club:"Valladolid",caps:30,g:5},{p:"Pervis Estupiñán",pos:"DEF",age:24,club:"Brighton & Hove Albion",caps:28,g:3}],
+  "England":[{p:"Harry Kane",cap:true,pos:"FWD",age:29,club:"Tottenham Hotspur",caps:75,g:51},{p:"Raheem Sterling",pos:"FWD",age:27,club:"Chelsea",caps:79,g:19},{p:"Marcus Rashford",pos:"FWD",age:25,club:"Manchester United",caps:46,g:12},{p:"Harry Maguire",pos:"DEF",age:29,club:"Manchester United",caps:48,g:7},{p:"Mason Mount",pos:"MID",age:23,club:"Chelsea",caps:32,g:5}],
+  "France":[{p:"Olivier Giroud",pos:"FWD",age:36,club:"Milan",caps:114,g:49},{p:"Antoine Griezmann",pos:"FWD",age:31,club:"Atlético Madrid",caps:110,g:42},{p:"Karim Benzema",pos:"FWD",age:34,club:"Real Madrid",caps:97,g:37},{p:"Kylian Mbappé",pos:"FWD",age:23,club:"Paris Saint-Germain",caps:59,g:28},{p:"Raphaël Varane",pos:"DEF",age:29,club:"Manchester United",caps:87,g:5}],
+  "Germany":[{p:"Thomas Müller",pos:"MID",age:33,club:"Bayern Munich",caps:118,g:44},{p:"Serge Gnabry",pos:"FWD",age:27,club:"Bayern Munich",caps:36,g:20},{p:"Mario Götze",pos:"MID",age:30,club:"Eintracht Frankfurt",caps:63,g:17},{p:"İlkay Gündoğan",pos:"MID",age:32,club:"Manchester City",caps:62,g:16},{p:"Leon Goretzka",pos:"MID",age:27,club:"Bayern Munich",caps:44,g:14}],
+  "Ghana":[{p:"André Ayew",cap:true,pos:"FWD",age:32,club:"Al-Sadd",caps:107,g:23},{p:"Jordan Ayew",pos:"FWD",age:31,club:"Crystal Palace",caps:82,g:20},{p:"Thomas Partey",pos:"MID",age:29,club:"Arsenal",caps:40,g:14},{p:"Mohammed Kudus",pos:"MID",age:22,club:"Ajax",caps:16,g:4},{p:"Baba Rahman",pos:"DEF",age:28,club:"Reading",caps:47,g:1}],
+  "Iran":[{p:"Sardar Azmoun",pos:"FWD",age:27,club:"Bayer Leverkusen",caps:65,g:41},{p:"Karim Ansarifard",pos:"FWD",age:32,club:"Omonia",caps:94,g:29},{p:"Mehdi Taremi",pos:"FWD",age:30,club:"Porto",caps:60,g:28},{p:"Alireza Jahanbakhsh",pos:"MID",age:29,club:"Feyenoord",caps:64,g:13},{p:"Ehsan Hajsafi",cap:true,pos:"DEF",age:32,club:"AEK Athens",caps:121,g:7}],
+  "Japan":[{p:"Takumi Minamino",pos:"MID",age:27,club:"Monaco",caps:43,g:17},{p:"Maya Yoshida",cap:true,pos:"DEF",age:34,club:"Schalke 04",caps:121,g:12},{p:"Junya Ito",pos:"MID",age:29,club:"Reims",caps:38,g:9},{p:"Takuma Asano",pos:"FWD",age:28,club:"VfL Bochum",caps:36,g:7},{p:"Daichi Kamada",pos:"MID",age:26,club:"Eintracht Frankfurt",caps:21,g:6}],
+  "Mexico":[{p:"Raúl Jiménez",pos:"FWD",age:31,club:"Wolverhampton Wanderers",caps:94,g:29},{p:"Andrés Guardado",cap:true,pos:"MID",age:36,club:"Real Betis",caps:177,g:28},{p:"Hirving Lozano",pos:"FWD",age:27,club:"Napoli",caps:59,g:16},{p:"Héctor Herrera",pos:"MID",age:32,club:"Houston Dynamo FC",caps:100,g:10},{p:"Uriel Antuna",pos:"FWD",age:25,club:"Cruz Azul",caps:34,g:8}],
+  "Morocco":[{p:"Hakim Ziyech",pos:"MID",age:29,club:"Chelsea",caps:42,g:17},{p:"Youssef En-Nesyri",pos:"FWD",age:25,club:"Sevilla",caps:49,g:14},{p:"Achraf Hakimi",pos:"DEF",age:24,club:"Paris Saint-Germain",caps:53,g:8},{p:"Abderrazak Hamdallah",pos:"FWD",age:31,club:"Al-Ittihad",caps:17,g:6},{p:"Sofiane Boufal",pos:"MID",age:29,club:"Angers",caps:31,g:5}],
+  "Netherlands":[{p:"Memphis Depay",pos:"FWD",age:28,club:"Barcelona",caps:81,g:42},{p:"Davy Klaassen",pos:"MID",age:29,club:"Ajax",caps:35,g:9},{p:"Luuk de Jong",pos:"FWD",age:32,club:"PSV Eindhoven",caps:38,g:8},{p:"Steven Bergwijn",pos:"FWD",age:25,club:"Ajax",caps:24,g:7},{p:"Vincent Janssen",pos:"FWD",age:28,club:"Antwerp",caps:20,g:7}],
+  "Poland":[{p:"Robert Lewandowski",cap:true,pos:"FWD",age:34,club:"Barcelona",caps:134,g:76},{p:"Kamil Grosicki",pos:"MID",age:34,club:"Pogoń Szczecin",caps:86,g:17},{p:"Arkadiusz Milik",pos:"FWD",age:28,club:"Juventus",caps:63,g:16},{p:"Krzysztof Piątek",pos:"FWD",age:27,club:"Salernitana",caps:24,g:10},{p:"Piotr Zieliński",pos:"MID",age:28,club:"Napoli",caps:74,g:9}],
+  "Portugal":[{p:"Cristiano Ronaldo",cap:true,pos:"FWD",age:37,club:"Manchester United",caps:191,g:117},{p:"André Silva",pos:"FWD",age:27,club:"RB Leipzig",caps:51,g:19},{p:"Bruno Fernandes",pos:"MID",age:28,club:"Manchester United",caps:48,g:9},{p:"Bernardo Silva",pos:"FWD",age:28,club:"Manchester City",caps:72,g:8},{p:"Pepe",pos:"DEF",age:39,club:"Porto",caps:128,g:7}],
+  "Qatar":[{p:"Almoez Ali",pos:"FWD",age:26,club:"Al-Duhail",caps:85,g:42},{p:"Hassan Al-Haydos",cap:true,pos:"MID",age:31,club:"Al-Sadd",caps:169,g:36},{p:"Akram Afif",pos:"FWD",age:26,club:"Al-Sadd",caps:89,g:26},{p:"Boualem Khoukhi",pos:"DEF",age:32,club:"Al-Sadd",caps:105,g:20},{p:"Abdelkarim Hassan",pos:"MID",age:29,club:"Al-Sadd",caps:130,g:15}],
+  "Saudi Arabia":[{p:"Salem Al-Dawsari",pos:"FWD",age:31,club:"Al-Hilal",caps:70,g:17},{p:"Saleh Al-Shehri",pos:"FWD",age:29,club:"Al-Hilal",caps:19,g:10},{p:"Salman Al-Faraj",cap:true,pos:"MID",age:33,club:"Al-Hilal",caps:69,g:8},{p:"Nawaf Al-Abed",pos:"MID",age:32,club:"Al-Shabab",caps:54,g:8},{p:"Firas Al-Buraikan",pos:"FWD",age:22,club:"Al-Fateh",caps:26,g:6}],
+  "Senegal":[{p:"Sadio Mané",pos:"FWD",age:30,club:"Bayern Munich",caps:93,g:34},{p:"Ismaïla Sarr",pos:"FWD",age:24,club:"Watford",caps:48,g:10},{p:"Famara Diédhiou",pos:"FWD",age:29,club:"Alanyaspor",caps:24,g:10},{p:"Idrissa Gueye",pos:"MID",age:33,club:"Everton",caps:96,g:7},{p:"Cheikhou Kouyaté",pos:"DEF",age:32,club:"Nottingham Forest",caps:83,g:4}],
+  "Serbia":[{p:"Aleksandar Mitrović",pos:"FWD",age:28,club:"Fulham",caps:76,g:50},{p:"Dušan Tadić",cap:true,pos:"FWD",age:34,club:"Ajax",caps:90,g:18},{p:"Luka Jović",pos:"FWD",age:24,club:"Fiorentina",caps:28,g:9},{p:"Dušan Vlahović",pos:"FWD",age:22,club:"Juventus",caps:16,g:8},{p:"Sergej Milinković-Savić",pos:"MID",age:27,club:"Lazio",caps:35,g:6}],
+  "South Korea":[{p:"Son Heung-min",cap:true,pos:"MID",age:30,club:"Tottenham Hotspur",caps:104,g:35},{p:"Hwang Ui-jo",pos:"FWD",age:30,club:"Olympiacos",caps:49,g:16},{p:"Kwon Chang-hoon",pos:"MID",age:28,club:"Gimcheon Sangmu",caps:42,g:12},{p:"Lee Jae-sung",pos:"MID",age:30,club:"Mainz 05",caps:64,g:9},{p:"Hwang Hee-chan",pos:"MID",age:26,club:"Wolverhampton Wanderers",caps:49,g:9}],
+  "Spain":[{p:"Álvaro Morata",pos:"FWD",age:30,club:"Atlético Madrid",caps:57,g:27},{p:"Ferran Torres",pos:"FWD",age:22,club:"Barcelona",caps:30,g:13},{p:"Jordi Alba",pos:"DEF",age:33,club:"Barcelona",caps:86,g:9},{p:"Pablo Sarabia",pos:"FWD",age:30,club:"Paris Saint-Germain",caps:24,g:9},{p:"Dani Olmo",pos:"FWD",age:24,club:"RB Leipzig",caps:24,g:4}],
+  "Switzerland":[{p:"Xherdan Shaqiri",pos:"MID",age:31,club:"Chicago Fire FC",caps:108,g:26},{p:"Haris Seferovic",pos:"FWD",age:30,club:"Galatasaray",caps:88,g:25},{p:"Granit Xhaka",cap:true,pos:"MID",age:30,club:"Arsenal",caps:106,g:12},{p:"Breel Embolo",pos:"FWD",age:25,club:"Monaco",caps:58,g:11},{p:"Ricardo Rodriguez",pos:"DEF",age:30,club:"Torino",caps:100,g:9}],
+  "Tunisia":[{p:"Wahbi Khazri",pos:"FWD",age:31,club:"Montpellier",caps:71,g:24},{p:"Youssef Msakni",cap:true,pos:"FWD",age:32,club:"Al-Arabi",caps:87,g:17},{p:"Naïm Sliti",pos:"FWD",age:30,club:"Al-Ettifaq",caps:68,g:13},{p:"Seifeddine Jaziri",pos:"FWD",age:29,club:"Zamalek",caps:29,g:10},{p:"Taha Yassine Khenissi",pos:"FWD",age:30,club:"Kuwait SC",caps:48,g:9}],
+  "United States":[{p:"Christian Pulisic",pos:"FWD",age:24,club:"Chelsea",caps:52,g:21},{p:"Jordan Morris",pos:"FWD",age:28,club:"Seattle Sounders FC",caps:49,g:11},{p:"Weston McKennie",pos:"MID",age:24,club:"Juventus",caps:37,g:9},{p:"Jesús Ferreira",pos:"FWD",age:21,club:"FC Dallas",caps:15,g:7},{p:"Brenden Aaronson",pos:"FWD",age:22,club:"Leeds United",caps:24,g:6}],
+  "Uruguay":[{p:"Luis Suárez",pos:"FWD",age:35,club:"Nacional",caps:134,g:68},{p:"Edinson Cavani",pos:"FWD",age:35,club:"Valencia",caps:133,g:58},{p:"Diego Godín",cap:true,pos:"DEF",age:36,club:"Vélez Sarsfield",caps:159,g:8},{p:"José Giménez",pos:"DEF",age:27,club:"Atlético Madrid",caps:78,g:8},{p:"Giorgian de Arrascaeta",pos:"MID",age:28,club:"Flamengo",caps:40,g:8}],
+  "Wales":[{p:"Gareth Bale",cap:true,pos:"FWD",age:33,club:"Los Angeles FC",caps:108,g:40},{p:"Aaron Ramsey",pos:"MID",age:31,club:"Nice",caps:75,g:20},{p:"Kieffer Moore",pos:"FWD",age:30,club:"Bournemouth",caps:28,g:9},{p:"Harry Wilson",pos:"MID",age:25,club:"Fulham",caps:39,g:5},{p:"Daniel James",pos:"FWD",age:25,club:"Fulham",caps:38,g:5}]
+};
+
+const TEAMS = {
+  "Argentina":{flag:"🇦🇷",iso:"AR",group:"C",rank:3,coach:"Lionel Scaloni",confederation:"CONMEBOL",c1:"#75AADB",c2:"#FFFFFF",accent:"#FCBF49",lat:-38,lng:-64,finishPlace:1,finishMedal:"🥇",
+    journey:[{stage:"Group",opp:"Saudi Arabia",oppFlag:"🇸🇦",gf:1,ga:2,res:"L"},{stage:"Group",opp:"Mexico",oppFlag:"🇲🇽",gf:2,ga:0,res:"W"},{stage:"Group",opp:"Poland",oppFlag:"🇵🇱",gf:2,ga:0,res:"W"},{stage:"R16",opp:"Australia",oppFlag:"🇦🇺",gf:2,ga:1,res:"W"},{stage:"QF",opp:"Netherlands",oppFlag:"🇳🇱",gf:2,ga:2,res:"W",note:"4-3 pen"},{stage:"SF",opp:"Croatia",oppFlag:"🇭🇷",gf:3,ga:0,res:"W"},{stage:"Final",opp:"France",oppFlag:"🇫🇷",gf:3,ga:3,res:"W",note:"4-2 pen"}],
+    achievements:[{h:"3rd World Cup Title",p:"Argentina's third star — joining 1978 and 1986. First title since 1986."},{h:"Messi Wins It All",p:"Lionel Messi captured the only major trophy missing from his career, scoring 7 goals and winning the Golden Ball."},{h:"Goalkeeping Hero",p:"Emiliano Martínez won the Golden Glove. Saved the deciding shootout kick in the QF and final."},{h:"Best Young Player",p:"Enzo Fernández named tournament's best young player at age 21."},{h:"6 Wins in a Row",p:"After the shock loss to Saudi Arabia, Argentina won all 6 remaining games — three in shootouts."}]},
+  "France":{flag:"🇫🇷",iso:"FR",group:"D",rank:4,coach:"Didier Deschamps",confederation:"UEFA",c1:"#0055A4",c2:"#FFFFFF",accent:"#EF4135",lat:46,lng:2,finishPlace:2,finishMedal:"🥈",
+    journey:[{stage:"Group",opp:"Australia",oppFlag:"🇦🇺",gf:4,ga:1,res:"W"},{stage:"Group",opp:"Denmark",oppFlag:"🇩🇰",gf:2,ga:1,res:"W"},{stage:"Group",opp:"Tunisia",oppFlag:"🇹🇳",gf:0,ga:1,res:"L"},{stage:"R16",opp:"Poland",oppFlag:"🇵🇱",gf:3,ga:1,res:"W"},{stage:"QF",opp:"England",oppFlag:"🏴󠁧󠁢󠁥󠁮󠁧󠁿",gf:2,ga:1,res:"W"},{stage:"SF",opp:"Morocco",oppFlag:"🇲🇦",gf:2,ga:0,res:"W"},{stage:"Final",opp:"Argentina",oppFlag:"🇦🇷",gf:3,ga:3,res:"L",note:"2-4 pen"}],
+    achievements:[{h:"Mbappé's Final Hat-trick",p:"Kylian Mbappé scored a hat-trick in the final — only the second man to do so (after Hurst, 1966) — and won the Golden Boot with 8 goals."},{h:"Defending-Champion Final",p:"First defending champion to reach the final since Brazil 1998."},{h:"Giroud Becomes All-Time Top Scorer",p:"Olivier Giroud surpassed Thierry Henry to become France's all-time leading scorer."},{h:"7th Final, 2nd in a Row",p:"France's 4th final overall; back-to-back appearances after winning Russia 2018."}]},
+  "Croatia":{flag:"🇭🇷",iso:"HR",group:"F",rank:12,coach:"Zlatko Dalić",confederation:"UEFA",c1:"#171796",c2:"#FFFFFF",accent:"#FF0000",lat:45.1,lng:15.2,finishPlace:3,finishMedal:"🥉",
+    journey:[{stage:"Group",opp:"Morocco",oppFlag:"🇲🇦",gf:0,ga:0,res:"D"},{stage:"Group",opp:"Canada",oppFlag:"🇨🇦",gf:4,ga:1,res:"W"},{stage:"Group",opp:"Belgium",oppFlag:"🇧🇪",gf:0,ga:0,res:"D"},{stage:"R16",opp:"Japan",oppFlag:"🇯🇵",gf:1,ga:1,res:"W",note:"3-1 pen"},{stage:"QF",opp:"Brazil",oppFlag:"🇧🇷",gf:1,ga:1,res:"W",note:"4-2 pen"},{stage:"SF",opp:"Argentina",oppFlag:"🇦🇷",gf:0,ga:3,res:"L"},{stage:"3rd Pl",opp:"Morocco",oppFlag:"🇲🇦",gf:2,ga:1,res:"W"}],
+    achievements:[{h:"Back-to-Back Medals",p:"After the 2018 final, Croatia took bronze in 2022 — incredible for a nation of 4 million."},{h:"Modrić's Bronze Ball",p:"Luka Modrić, age 37, finished 3rd in Best Player voting."},{h:"Penalty Specialists",p:"Beat Japan and Brazil in shootouts."}]},
+  "Morocco":{flag:"🇲🇦",iso:"MA",group:"F",rank:22,coach:"Walid Regragui",confederation:"CAF",c1:"#C1272D",c2:"#006233",accent:"#FFFFFF",lat:31.8,lng:-7.1,finishPlace:4,finishMedal:"4th",
+    journey:[{stage:"Group",opp:"Croatia",oppFlag:"🇭🇷",gf:0,ga:0,res:"D"},{stage:"Group",opp:"Belgium",oppFlag:"🇧🇪",gf:2,ga:0,res:"W"},{stage:"Group",opp:"Canada",oppFlag:"🇨🇦",gf:2,ga:1,res:"W"},{stage:"R16",opp:"Spain",oppFlag:"🇪🇸",gf:0,ga:0,res:"W",note:"3-0 pen"},{stage:"QF",opp:"Portugal",oppFlag:"🇵🇹",gf:1,ga:0,res:"W"},{stage:"SF",opp:"France",oppFlag:"🇫🇷",gf:0,ga:2,res:"L"},{stage:"3rd Pl",opp:"Croatia",oppFlag:"🇭🇷",gf:1,ga:2,res:"L"}],
+    achievements:[{h:"First African Semi-finalist",p:"Morocco became the first African and first Arab nation to ever reach a World Cup semi-final."},{h:"Beat Three European Powers",p:"Eliminated Belgium, Spain (penalties) and Portugal."},{h:"Best Defence in Tournament",p:"Conceded just 5 goals in 7 matches."},{h:"Hakimi's Decider",p:"Achraf Hakimi's panenka beat Spain in the R16 shootout."}]},
+  "Netherlands":{flag:"🇳🇱",iso:"NL",group:"A",rank:8,coach:"Louis van Gaal",confederation:"UEFA",c1:"#FF6900",c2:"#21468B",accent:"#FFFFFF",lat:52.4,lng:5.3,finishPlace:5,
+    journey:[{stage:"Group",opp:"Senegal",oppFlag:"🇸🇳",gf:2,ga:0,res:"W"},{stage:"Group",opp:"Ecuador",oppFlag:"🇪🇨",gf:1,ga:1,res:"D"},{stage:"Group",opp:"Qatar",oppFlag:"🇶🇦",gf:2,ga:0,res:"W"},{stage:"R16",opp:"USA",oppFlag:"🇺🇸",gf:3,ga:1,res:"W"},{stage:"QF",opp:"Argentina",oppFlag:"🇦🇷",gf:2,ga:2,res:"L",note:"3-4 pen"}],
+    achievements:[{h:"Topped Group A",p:"Won Group A unbeaten."},{h:"94th-Minute Comeback",p:"Came back from 0-2 down vs Argentina with two late goals."}]},
+  "Brazil":{flag:"🇧🇷",iso:"BR",group:"G",rank:1,coach:"Tite",confederation:"CONMEBOL",c1:"#009C3B",c2:"#FFDF00",accent:"#002776",lat:-14.2,lng:-51.9,finishPlace:6,
+    journey:[{stage:"Group",opp:"Serbia",oppFlag:"🇷🇸",gf:2,ga:0,res:"W"},{stage:"Group",opp:"Switzerland",oppFlag:"🇨🇭",gf:1,ga:0,res:"W"},{stage:"Group",opp:"Cameroon",oppFlag:"🇨🇲",gf:0,ga:1,res:"L"},{stage:"R16",opp:"South Korea",oppFlag:"🇰🇷",gf:4,ga:1,res:"W"},{stage:"QF",opp:"Croatia",oppFlag:"🇭🇷",gf:1,ga:1,res:"L",note:"2-4 pen"}],
+    achievements:[{h:"Pelé's Goalscoring Record",p:"Neymar matched Pelé's all-time Brazil scoring record of 77 goals."},{h:"Topped Group G",p:"Won the group with two clean sheets."},{h:"5th Straight QF Exit",p:"5th consecutive World Cup without reaching a semi-final."}]},
+  "England":{flag:"🏴󠁧󠁢󠁥󠁮󠁧󠁿",iso:"GB",group:"B",rank:5,coach:"Gareth Southgate",confederation:"UEFA",c1:"#012169",c2:"#FFFFFF",accent:"#CE2027",lat:52.3,lng:-1.5,finishPlace:7,
+    journey:[{stage:"Group",opp:"Iran",oppFlag:"🇮🇷",gf:6,ga:2,res:"W"},{stage:"Group",opp:"USA",oppFlag:"🇺🇸",gf:0,ga:0,res:"D"},{stage:"Group",opp:"Wales",oppFlag:"🏴󠁧󠁢󠁷󠁬󠁳󠁿",gf:3,ga:0,res:"W"},{stage:"R16",opp:"Senegal",oppFlag:"🇸🇳",gf:3,ga:0,res:"W"},{stage:"QF",opp:"France",oppFlag:"🇫🇷",gf:1,ga:2,res:"L"}],
+    achievements:[{h:"Won Group B",p:"Topped the group with 7 points and 9 goals scored."},{h:"Fair Play Award",p:"Won the FIFA Fair Play Award."},{h:"Heartbreak vs France",p:"Harry Kane scored a record-equalling penalty then missed a 2nd in the 2-1 QF defeat."}]},
+  "Portugal":{flag:"🇵🇹",iso:"PT",group:"H",rank:9,coach:"Fernando Santos",confederation:"UEFA",c1:"#006600",c2:"#FF0000",accent:"#FFCC00",lat:39.4,lng:-8.2,finishPlace:8,
+    journey:[{stage:"Group",opp:"Ghana",oppFlag:"🇬🇭",gf:3,ga:2,res:"W"},{stage:"Group",opp:"Uruguay",oppFlag:"🇺🇾",gf:2,ga:0,res:"W"},{stage:"Group",opp:"South Korea",oppFlag:"🇰🇷",gf:1,ga:2,res:"L"},{stage:"R16",opp:"Switzerland",oppFlag:"🇨🇭",gf:6,ga:1,res:"W"},{stage:"QF",opp:"Morocco",oppFlag:"🇲🇦",gf:0,ga:1,res:"L"}],
+    achievements:[{h:"Gonçalo Ramos Hat-trick",p:"Replacing Ronaldo, Gonçalo Ramos scored a hat-trick in the 6-1 R16 win."},{h:"Ronaldo's Last World Cup",p:"Cristiano Ronaldo's 5th and final WC as Portugal captain — first man to score in 5 different WCs."}]},
+  "Senegal":{flag:"🇸🇳",iso:"SN",group:"A",rank:18,coach:"Aliou Cissé",confederation:"CAF",c1:"#00853F",c2:"#FDEF42",accent:"#E31B23",lat:14.5,lng:-14.4,finishPlace:9,
+    journey:[{stage:"Group",opp:"Netherlands",oppFlag:"🇳🇱",gf:0,ga:2,res:"L"},{stage:"Group",opp:"Qatar",oppFlag:"🇶🇦",gf:3,ga:1,res:"W"},{stage:"Group",opp:"Ecuador",oppFlag:"🇪🇨",gf:2,ga:1,res:"W"},{stage:"R16",opp:"England",oppFlag:"🏴󠁧󠁢󠁥󠁮󠁧󠁿",gf:0,ga:3,res:"L"}],
+    achievements:[{h:"R16 Without Mané",p:"Reached R16 despite losing Sadio Mané to injury."},{h:"2nd in Group A",p:"First African team out of the group."}]},
+  "Japan":{flag:"🇯🇵",iso:"JP",group:"E",rank:24,coach:"Hajime Moriyasu",confederation:"AFC",c1:"#BC002D",c2:"#FFFFFF",accent:"#000000",lat:36.2,lng:138.2,finishPlace:10,
+    journey:[{stage:"Group",opp:"Germany",oppFlag:"🇩🇪",gf:2,ga:1,res:"W"},{stage:"Group",opp:"Costa Rica",oppFlag:"🇨🇷",gf:0,ga:1,res:"L"},{stage:"Group",opp:"Spain",oppFlag:"🇪🇸",gf:2,ga:1,res:"W"},{stage:"R16",opp:"Croatia",oppFlag:"🇭🇷",gf:1,ga:1,res:"L",note:"1-3 pen"}],
+    achievements:[{h:"Beat Germany AND Spain",p:"Two come-from-behind 2-1 wins over former champions in a single group."},{h:"Topped Group of Death",p:"Won Group E ahead of Spain on goal difference."}]},
+  "Australia":{flag:"🇦🇺",iso:"AU",group:"D",rank:38,coach:"Graham Arnold",confederation:"AFC",c1:"#012169",c2:"#FFCD00",accent:"#E4002B",lat:-25.3,lng:133.8,finishPlace:11,
+    journey:[{stage:"Group",opp:"France",oppFlag:"🇫🇷",gf:1,ga:4,res:"L"},{stage:"Group",opp:"Tunisia",oppFlag:"🇹🇳",gf:1,ga:0,res:"W"},{stage:"Group",opp:"Denmark",oppFlag:"🇩🇰",gf:1,ga:0,res:"W"},{stage:"R16",opp:"Argentina",oppFlag:"🇦🇷",gf:1,ga:2,res:"L"}],
+    achievements:[{h:"First R16 Since 2006",p:"Australia reached the knockout stage for only the second time."},{h:"Eliminated Denmark",p:"Mathew Leckie's solo goal sealed an unlikely advance."}]},
+  "United States":{flag:"🇺🇸",iso:"US",group:"B",rank:16,coach:"Gregg Berhalter",confederation:"CONCACAF",c1:"#0A3161",c2:"#FFFFFF",accent:"#B31942",lat:39.8,lng:-98.6,finishPlace:12,
+    journey:[{stage:"Group",opp:"Wales",oppFlag:"🏴󠁧󠁢󠁷󠁬󠁳󠁿",gf:1,ga:1,res:"D"},{stage:"Group",opp:"England",oppFlag:"🏴󠁧󠁢󠁥󠁮󠁧󠁿",gf:0,ga:0,res:"D"},{stage:"Group",opp:"Iran",oppFlag:"🇮🇷",gf:1,ga:0,res:"W"},{stage:"R16",opp:"Netherlands",oppFlag:"🇳🇱",gf:1,ga:3,res:"L"}],
+    achievements:[{h:"Returned After 2018 Miss",p:"Reached the knockouts on their return after missing 2018."},{h:"Held England to 0-0",p:"Out-shot England — youngest US squad in WC history."}]},
+  "Switzerland":{flag:"🇨🇭",iso:"CH",group:"G",rank:15,coach:"Murat Yakin",confederation:"UEFA",c1:"#D52B1E",c2:"#FFFFFF",accent:"#FFFFFF",lat:46.8,lng:8.2,finishPlace:13,
+    journey:[{stage:"Group",opp:"Cameroon",oppFlag:"🇨🇲",gf:1,ga:0,res:"W"},{stage:"Group",opp:"Brazil",oppFlag:"🇧🇷",gf:0,ga:1,res:"L"},{stage:"Group",opp:"Serbia",oppFlag:"🇷🇸",gf:3,ga:2,res:"W"},{stage:"R16",opp:"Portugal",oppFlag:"🇵🇹",gf:1,ga:6,res:"L"}],
+    achievements:[{h:"R16 for 2nd Straight WC",p:"Beat Cameroon and a tense Serbia 3-2 in the decider."}]},
+  "South Korea":{flag:"🇰🇷",iso:"KR",group:"H",rank:28,coach:"Paulo Bento",confederation:"AFC",c1:"#003478",c2:"#FFFFFF",accent:"#C60C30",lat:35.9,lng:127.7,finishPlace:14,
+    journey:[{stage:"Group",opp:"Uruguay",oppFlag:"🇺🇾",gf:0,ga:0,res:"D"},{stage:"Group",opp:"Ghana",oppFlag:"🇬🇭",gf:2,ga:3,res:"L"},{stage:"Group",opp:"Portugal",oppFlag:"🇵🇹",gf:2,ga:1,res:"W"},{stage:"R16",opp:"Brazil",oppFlag:"🇧🇷",gf:1,ga:4,res:"L"}],
+    achievements:[{h:"Last-Gasp Heroics",p:"Hwang Hee-chan's stoppage-time goal beat Portugal 2-1."}]},
+  "Spain":{flag:"🇪🇸",iso:"ES",group:"E",rank:7,coach:"Luis Enrique",confederation:"UEFA",c1:"#AA151B",c2:"#F1BF00",accent:"#FFFFFF",lat:40.5,lng:-3.7,finishPlace:15,
+    journey:[{stage:"Group",opp:"Costa Rica",oppFlag:"🇨🇷",gf:7,ga:0,res:"W"},{stage:"Group",opp:"Germany",oppFlag:"🇩🇪",gf:1,ga:1,res:"D"},{stage:"Group",opp:"Japan",oppFlag:"🇯🇵",gf:1,ga:2,res:"L"},{stage:"R16",opp:"Morocco",oppFlag:"🇲🇦",gf:0,ga:0,res:"L",note:"0-3 pen"}],
+    achievements:[{h:"Opening 7-0 Demolition",p:"Spain's 7-0 win over Costa Rica was the biggest of the group stage."},{h:"Penalty Misery",p:"Missed all 3 of their penalties vs Morocco."}]},
+  "Poland":{flag:"🇵🇱",iso:"PL",group:"C",rank:26,coach:"Czesław Michniewicz",confederation:"UEFA",c1:"#FFFFFF",c2:"#DC143C",accent:"#FFFFFF",lat:51.9,lng:19.1,finishPlace:16,
+    journey:[{stage:"Group",opp:"Mexico",oppFlag:"🇲🇽",gf:0,ga:0,res:"D"},{stage:"Group",opp:"Saudi Arabia",oppFlag:"🇸🇦",gf:2,ga:0,res:"W"},{stage:"Group",opp:"Argentina",oppFlag:"🇦🇷",gf:0,ga:2,res:"L"},{stage:"R16",opp:"France",oppFlag:"🇫🇷",gf:1,ga:3,res:"L"}],
+    achievements:[{h:"Lewandowski's First WC Goal",p:"Robert Lewandowski scored his first ever World Cup goal."},{h:"Through on Yellow Cards",p:"Advanced over Mexico on fair-play tiebreaker."}]},
+  "Belgium":{flag:"🇧🇪",iso:"BE",group:"F",rank:2,coach:"Roberto Martínez",confederation:"UEFA",c1:"#000000",c2:"#FAE042",accent:"#ED2939",lat:50.5,lng:4.5,finishPlace:18,
+    journey:[{stage:"Group",opp:"Canada",oppFlag:"🇨🇦",gf:1,ga:0,res:"W"},{stage:"Group",opp:"Morocco",oppFlag:"🇲🇦",gf:0,ga:2,res:"L"},{stage:"Group",opp:"Croatia",oppFlag:"🇭🇷",gf:0,ga:0,res:"D"}],
+    achievements:[{h:"Golden Generation's End",p:"FIFA's #2-ranked side crashed out of the group, ending the De Bruyne-Hazard-Lukaku era."}]},
+  "Germany":{flag:"🇩🇪",iso:"DE",group:"E",rank:11,coach:"Hansi Flick",confederation:"UEFA",c1:"#000000",c2:"#DD0000",accent:"#FFCE00",lat:51.2,lng:10.5,finishPlace:17,
+    journey:[{stage:"Group",opp:"Japan",oppFlag:"🇯🇵",gf:1,ga:2,res:"L"},{stage:"Group",opp:"Spain",oppFlag:"🇪🇸",gf:1,ga:1,res:"D"},{stage:"Group",opp:"Costa Rica",oppFlag:"🇨🇷",gf:4,ga:2,res:"W"}],
+    achievements:[{h:"Back-to-Back Group Exits",p:"Germany exited the group stage in successive tournaments (2018, 2022) for the first time in their history."}]},
+  "Uruguay":{flag:"🇺🇾",iso:"UY",group:"H",rank:14,coach:"Diego Alonso",confederation:"CONMEBOL",c1:"#7B9CDA",c2:"#FFFFFF",accent:"#FFCD00",lat:-32.5,lng:-55.8,finishPlace:19,
+    journey:[{stage:"Group",opp:"South Korea",oppFlag:"🇰🇷",gf:0,ga:0,res:"D"},{stage:"Group",opp:"Portugal",oppFlag:"🇵🇹",gf:0,ga:2,res:"L"},{stage:"Group",opp:"Ghana",oppFlag:"🇬🇭",gf:2,ga:0,res:"W"}],
+    achievements:[{h:"Out on Yellow Cards",p:"Beat Ghana but eliminated by South Korea on fair-play tiebreaker."}]},
+  "Mexico":{flag:"🇲🇽",iso:"MX",group:"C",rank:13,coach:"Gerardo Martino",confederation:"CONCACAF",c1:"#006847",c2:"#FFFFFF",accent:"#CE1126",lat:23.6,lng:-102.5,finishPlace:22,
+    journey:[{stage:"Group",opp:"Poland",oppFlag:"🇵🇱",gf:0,ga:0,res:"D"},{stage:"Group",opp:"Argentina",oppFlag:"🇦🇷",gf:0,ga:2,res:"L"},{stage:"Group",opp:"Saudi Arabia",oppFlag:"🇸🇦",gf:2,ga:1,res:"W"}],
+    achievements:[{h:"30-Year R16 Streak Ends",p:"Mexico failed to reach the knockouts for the first time since 1990."}]},
+  "Saudi Arabia":{flag:"🇸🇦",iso:"SA",group:"C",rank:51,coach:"Hervé Renard",confederation:"AFC",c1:"#006C35",c2:"#FFFFFF",accent:"#FFFFFF",lat:23.9,lng:45.1,finishPlace:25,
+    journey:[{stage:"Group",opp:"Argentina",oppFlag:"🇦🇷",gf:2,ga:1,res:"W"},{stage:"Group",opp:"Poland",oppFlag:"🇵🇱",gf:0,ga:2,res:"L"},{stage:"Group",opp:"Mexico",oppFlag:"🇲🇽",gf:1,ga:2,res:"L"}],
+    achievements:[{h:"Beat the Champions",p:"Saudi Arabia's 2-1 win over eventual champions Argentina was the biggest upset of the tournament."}]},
+  "Tunisia":{flag:"🇹🇳",iso:"TN",group:"D",rank:30,coach:"Jalel Kadri",confederation:"CAF",c1:"#E70013",c2:"#FFFFFF",accent:"#FFFFFF",lat:33.9,lng:9.5,finishPlace:24,
+    journey:[{stage:"Group",opp:"Denmark",oppFlag:"🇩🇰",gf:0,ga:0,res:"D"},{stage:"Group",opp:"Australia",oppFlag:"🇦🇺",gf:0,ga:1,res:"L"},{stage:"Group",opp:"France",oppFlag:"🇫🇷",gf:1,ga:0,res:"W"}],
+    achievements:[{h:"Beat Reigning Champions",p:"Tunisia's 1-0 win over France was their first ever WC victory over a former champion."}]},
+  "Denmark":{flag:"🇩🇰",iso:"DK",group:"D",rank:10,coach:"Kasper Hjulmand",confederation:"UEFA",c1:"#C8102E",c2:"#FFFFFF",accent:"#FFFFFF",lat:56.3,lng:9.5,finishPlace:27,
+    journey:[{stage:"Group",opp:"Tunisia",oppFlag:"🇹🇳",gf:0,ga:0,res:"D"},{stage:"Group",opp:"France",oppFlag:"🇫🇷",gf:1,ga:2,res:"L"},{stage:"Group",opp:"Australia",oppFlag:"🇦🇺",gf:0,ga:1,res:"L"}],
+    achievements:[{h:"Underwhelming Exit",p:"Pre-tournament dark horses (Nations League winners) finished bottom of Group D."}]},
+  "Cameroon":{flag:"🇨🇲",iso:"CM",group:"G",rank:43,coach:"Rigobert Song",confederation:"CAF",c1:"#007A5E",c2:"#CE1126",accent:"#FCD116",lat:7.4,lng:12.4,finishPlace:21,
+    journey:[{stage:"Group",opp:"Switzerland",oppFlag:"🇨🇭",gf:0,ga:1,res:"L"},{stage:"Group",opp:"Serbia",oppFlag:"🇷🇸",gf:3,ga:3,res:"D"},{stage:"Group",opp:"Brazil",oppFlag:"🇧🇷",gf:1,ga:0,res:"W"}],
+    achievements:[{h:"First African to Beat Brazil",p:"Vincent Aboubakar's 92nd-minute header — the first African team ever to beat Brazil at a World Cup."}]},
+  "Ecuador":{flag:"🇪🇨",iso:"EC",group:"A",rank:44,coach:"Gustavo Alfaro",confederation:"CONMEBOL",c1:"#FFD100",c2:"#0072CE",accent:"#EF3340",lat:-1.8,lng:-78.2,finishPlace:23,
+    journey:[{stage:"Group",opp:"Qatar",oppFlag:"🇶🇦",gf:2,ga:0,res:"W"},{stage:"Group",opp:"Netherlands",oppFlag:"🇳🇱",gf:1,ga:1,res:"D"},{stage:"Group",opp:"Senegal",oppFlag:"🇸🇳",gf:1,ga:2,res:"L"}],
+    achievements:[{h:"Opening Win Over Qatar",p:"Enner Valencia's brace — first opening-day defeat for any host."}]},
+  "Iran":{flag:"🇮🇷",iso:"IR",group:"B",rank:20,coach:"Carlos Queiroz",confederation:"AFC",c1:"#239F40",c2:"#FFFFFF",accent:"#DA0000",lat:32.4,lng:53.7,finishPlace:26,
+    journey:[{stage:"Group",opp:"England",oppFlag:"🏴󠁧󠁢󠁥󠁮󠁧󠁿",gf:2,ga:6,res:"L"},{stage:"Group",opp:"Wales",oppFlag:"🏴󠁧󠁢󠁷󠁬󠁳󠁿",gf:2,ga:0,res:"W"},{stage:"Group",opp:"USA",oppFlag:"🇺🇸",gf:0,ga:1,res:"L"}],
+    achievements:[{h:"Late Drama vs Wales",p:"Two stoppage-time goals beat Wales 2-0."}]},
+  "Wales":{flag:"🏴󠁧󠁢󠁷󠁬󠁳󠁿",iso:"GB-WLS",group:"B",rank:19,coach:"Rob Page",confederation:"UEFA",c1:"#D81E05",c2:"#00803D",accent:"#FFFFFF",lat:52.5,lng:-3.7,finishPlace:29,
+    journey:[{stage:"Group",opp:"USA",oppFlag:"🇺🇸",gf:1,ga:1,res:"D"},{stage:"Group",opp:"Iran",oppFlag:"🇮🇷",gf:0,ga:2,res:"L"},{stage:"Group",opp:"England",oppFlag:"🏴󠁧󠁢󠁥󠁮󠁧󠁿",gf:0,ga:3,res:"L"}],
+    achievements:[{h:"Wales' First WC Since 1958",p:"After 64 years away, Wales returned to a World Cup."}]},
+  "Costa Rica":{flag:"🇨🇷",iso:"CR",group:"E",rank:31,coach:"Luis Fernando Suárez",confederation:"CONCACAF",c1:"#002B7F",c2:"#FFFFFF",accent:"#CE1126",lat:9.7,lng:-83.7,finishPlace:28,
+    journey:[{stage:"Group",opp:"Spain",oppFlag:"🇪🇸",gf:0,ga:7,res:"L"},{stage:"Group",opp:"Japan",oppFlag:"🇯🇵",gf:1,ga:0,res:"W"},{stage:"Group",opp:"Germany",oppFlag:"🇩🇪",gf:2,ga:4,res:"L"}],
+    achievements:[{h:"Stunned Japan",p:"Bounced back from 0-7 to beat Japan 1-0."}]},
+  "Serbia":{flag:"🇷🇸",iso:"RS",group:"G",rank:21,coach:"Dragan Stojković",confederation:"UEFA",c1:"#C6363C",c2:"#FFFFFF",accent:"#0C4076",lat:44.1,lng:21,finishPlace:30,
+    journey:[{stage:"Group",opp:"Brazil",oppFlag:"🇧🇷",gf:0,ga:2,res:"L"},{stage:"Group",opp:"Cameroon",oppFlag:"🇨🇲",gf:3,ga:3,res:"D"},{stage:"Group",opp:"Switzerland",oppFlag:"🇨🇭",gf:2,ga:3,res:"L"}],
+    achievements:[{h:"Goals But Not Points",p:"Five goals in three games but only one point."}]},
+  "Ghana":{flag:"🇬🇭",iso:"GH",group:"H",rank:61,coach:"Otto Addo",confederation:"CAF",c1:"#CE1126",c2:"#FCD116",accent:"#006B3F",lat:7.9,lng:-1,finishPlace:32,
+    journey:[{stage:"Group",opp:"Portugal",oppFlag:"🇵🇹",gf:2,ga:3,res:"L"},{stage:"Group",opp:"South Korea",oppFlag:"🇰🇷",gf:3,ga:2,res:"W"},{stage:"Group",opp:"Uruguay",oppFlag:"🇺🇾",gf:0,ga:2,res:"L"}],
+    achievements:[{h:"2010 Revenge Hopes Dashed",p:"Ghana lost their long-awaited rematch with Uruguay 0-2."}]},
+  "Canada":{flag:"🇨🇦",iso:"CA",group:"F",rank:41,coach:"John Herdman",confederation:"CONCACAF",c1:"#FF0000",c2:"#FFFFFF",accent:"#FF0000",lat:56.1,lng:-106.3,finishPlace:31,
+    journey:[{stage:"Group",opp:"Belgium",oppFlag:"🇧🇪",gf:0,ga:1,res:"L"},{stage:"Group",opp:"Croatia",oppFlag:"🇭🇷",gf:1,ga:4,res:"L"},{stage:"Group",opp:"Morocco",oppFlag:"🇲🇦",gf:1,ga:2,res:"L"}],
+    achievements:[{h:"First WC Since 1986",p:"Returned to the World Cup after 36 years."}]},
+  "Qatar":{flag:"🇶🇦",iso:"QA",group:"A",rank:50,coach:"Félix Sánchez",confederation:"AFC",c1:"#8A1538",c2:"#FFFFFF",accent:"#8A1538",lat:25.4,lng:51.2,finishPlace:32,
+    journey:[{stage:"Group",opp:"Ecuador",oppFlag:"🇪🇨",gf:0,ga:2,res:"L"},{stage:"Group",opp:"Senegal",oppFlag:"🇸🇳",gf:1,ga:3,res:"L"},{stage:"Group",opp:"Netherlands",oppFlag:"🇳🇱",gf:0,ga:2,res:"L"}],
+    achievements:[{h:"First Host to Lose Opener",p:"Qatar became the first host nation to lose their opening match."},{h:"Worst Host Performance",p:"Lost all three games."}]}
+};
+
+const GROUP_STANDINGS = {
+  A:[{t:"Netherlands",p:7,adv:1},{t:"Senegal",p:6,adv:1},{t:"Ecuador",p:4,adv:0},{t:"Qatar",p:0,adv:0}],
+  B:[{t:"England",p:7,adv:1},{t:"United States",p:5,adv:1},{t:"Iran",p:3,adv:0},{t:"Wales",p:1,adv:0}],
+  C:[{t:"Argentina",p:6,adv:1},{t:"Poland",p:4,adv:1},{t:"Mexico",p:4,adv:0},{t:"Saudi Arabia",p:3,adv:0}],
+  D:[{t:"France",p:6,adv:1},{t:"Australia",p:6,adv:1},{t:"Tunisia",p:4,adv:0},{t:"Denmark",p:1,adv:0}],
+  E:[{t:"Japan",p:6,adv:1},{t:"Spain",p:4,adv:1},{t:"Germany",p:4,adv:0},{t:"Costa Rica",p:3,adv:0}],
+  F:[{t:"Morocco",p:7,adv:1},{t:"Croatia",p:5,adv:1},{t:"Belgium",p:4,adv:0},{t:"Canada",p:0,adv:0}],
+  G:[{t:"Brazil",p:6,adv:1},{t:"Switzerland",p:6,adv:1},{t:"Cameroon",p:4,adv:0},{t:"Serbia",p:1,adv:0}],
+  H:[{t:"Portugal",p:6,adv:1},{t:"South Korea",p:4,adv:1},{t:"Uruguay",p:4,adv:0},{t:"Ghana",p:3,adv:0}]
+};
+
+const TOP_SCORERS = [
+  {p:"Kylian Mbappé",t:"France",fg:"🇫🇷",g:8,note:"Golden Boot"},
+  {p:"Lionel Messi",t:"Argentina",fg:"🇦🇷",g:7,note:"Golden Ball"},
+  {p:"Olivier Giroud",t:"France",fg:"🇫🇷",g:4,note:""},
+  {p:"Julián Álvarez",t:"Argentina",fg:"🇦🇷",g:4,note:""},
+  {p:"Cody Gakpo",t:"Netherlands",fg:"🇳🇱",g:3,note:""},
+  {p:"Marcus Rashford",t:"England",fg:"🏴󠁧󠁢󠁥󠁮󠁧󠁿",g:3,note:""},
+  {p:"Bukayo Saka",t:"England",fg:"🏴󠁧󠁢󠁥󠁮󠁧󠁿",g:3,note:""},
+  {p:"Gonçalo Ramos",t:"Portugal",fg:"🇵🇹",g:3,note:"Hat-trick vs Switzerland"},
+  {p:"Richarlison",t:"Brazil",fg:"🇧🇷",g:3,note:""},
+  {p:"Enner Valencia",t:"Ecuador",fg:"🇪🇨",g:3,note:""},
+  {p:"Vincent Aboubakar",t:"Cameroon",fg:"🇨🇲",g:3,note:""},
+  {p:"Álvaro Morata",t:"Spain",fg:"🇪🇸",g:3,note:""}
+];
+
+const KO = {
+  R16:[{h:"Netherlands",hf:"🇳🇱",hg:3,ag:1,a:"USA",af:"🇺🇸"},{h:"Argentina",hf:"🇦🇷",hg:2,ag:1,a:"Australia",af:"🇦🇺"},{h:"France",hf:"🇫🇷",hg:3,ag:1,a:"Poland",af:"🇵🇱"},{h:"England",hf:"🏴󠁧󠁢󠁥󠁮󠁧󠁿",hg:3,ag:0,a:"Senegal",af:"🇸🇳"},{h:"Croatia",hf:"🇭🇷",hg:1,ag:1,a:"Japan",af:"🇯🇵",pen:"3-1 Croatia"},{h:"Brazil",hf:"🇧🇷",hg:4,ag:1,a:"South Korea",af:"🇰🇷"},{h:"Morocco",hf:"🇲🇦",hg:0,ag:0,a:"Spain",af:"🇪🇸",pen:"3-0 Morocco"},{h:"Portugal",hf:"🇵🇹",hg:6,ag:1,a:"Switzerland",af:"🇨🇭"}],
+  QF:[{h:"Croatia",hf:"🇭🇷",hg:1,ag:1,a:"Brazil",af:"🇧🇷",pen:"4-2 Croatia"},{h:"Netherlands",hf:"🇳🇱",hg:2,ag:2,a:"Argentina",af:"🇦🇷",pen:"4-3 Argentina"},{h:"Morocco",hf:"🇲🇦",hg:1,ag:0,a:"Portugal",af:"🇵🇹"},{h:"England",hf:"🏴󠁧󠁢󠁥󠁮󠁧󠁿",hg:1,ag:2,a:"France",af:"🇫🇷"}],
+  SF:[{h:"Argentina",hf:"🇦🇷",hg:3,ag:0,a:"Croatia",af:"🇭🇷"},{h:"France",hf:"🇫🇷",hg:2,ag:0,a:"Morocco",af:"🇲🇦"}],
+  Final:[{h:"Argentina",hf:"🇦🇷",hg:3,ag:3,a:"France",af:"🇫🇷",pen:"4-2 Argentina"}]
+};
+
+const flagFor = (n) => (TEAMS[n] && TEAMS[n].flag) || "";
+
+const groupsGrid = document.getElementById("groups-grid");
+Object.entries(GROUP_STANDINGS).forEach(([letter, teams])=>{
+  const div = document.createElement("div"); div.className="group";
+  div.innerHTML = `<h3><span class="pip">${letter}</span> Group ${letter}</h3>`+
+    teams.map((row,i)=>`<div class="row ${row.adv?'advanced':''}">
+      <span class="pos">${i+1}</span><span class="flag">${flagFor(row.t)}</span>
+      <span class="name">${row.t}</span><span class="pts">${row.p} pts</span>
+    </div>`).join("")+`<div class="miniscore">Top 2 advance</div>`;
+  groupsGrid.appendChild(div);
+});
+
+const bracketEl = document.getElementById("bracket");
+function matchHTML(m, isFinal){
+  const winnerHome = m.pen ? m.pen.includes(m.h) : m.hg > m.ag;
+  return `<div class="match ${isFinal?'final':''}">
+    <div class="stage-tag">${m.pen?"On penalties":""}</div>
+    <div class="row ${winnerHome?'win':'lose'}"><span><span class="flag">${m.hf}</span>${m.h}</span><span class="score">${m.hg}</span></div>
+    <div class="row ${winnerHome?'lose':'win'}"><span><span class="flag">${m.af}</span>${m.a}</span><span class="score">${m.ag}</span></div>
+    ${m.pen?`<div class="stage-tag" style="text-align:right;color:#7a0826;">${m.pen}</div>`:""}
+  </div>`;
+}
+const allCols = [
+  {label:"Round of 16", matches:[KO.R16[0],KO.R16[1],KO.R16[2],KO.R16[3]]},
+  {label:"Quarter-finals", matches:[KO.QF[0],KO.QF[1]]},
+  {label:"Semi-finals", matches:[KO.SF[0]]},
+  {label:"Final", matches:[KO.Final[0]]},
+  {label:"Semi-finals", matches:[KO.SF[1]]},
+  {label:"Quarter-finals", matches:[KO.QF[2],KO.QF[3]]},
+  {label:"Round of 16", matches:[KO.R16[4],KO.R16[5],KO.R16[6],KO.R16[7]]}
+];
+allCols.forEach(c=>{
+  const col = document.createElement("div"); col.className="col";
+  col.innerHTML = `<div class="col-label">${c.label}</div>` + c.matches.map(m=>matchHTML(m, c.label==="Final")).join("");
+  bracketEl.appendChild(col);
+});
+
+const sc = document.getElementById("scorers");
+TOP_SCORERS.forEach((s,i)=>{
+  const div = document.createElement("div"); div.className="scorer";
+  div.innerHTML = `<span class="rk">${i+1}</span><span class="flg">${s.fg}</span>
+    <span class="nm">${s.p}<small>${s.t}${s.note?" · "+s.note:""}</small></span>
+    <span class="gls">${s.g}</span>
+    <div class="bar"><div style="width:${(s.g/8)*100}%"></div></div>`;
+  sc.appendChild(div);
+});
+
+const teamAgeArr = Object.entries(TEAM_SQUAD).map(([t,d])=>({t, a:d.avgAge})).sort((a,b)=>b.a-a.a);
+new Chart(document.getElementById("ch-age"), {
+  type:"bar", data:{labels: teamAgeArr.map(r=>r.t),
+    datasets:[{ data:teamAgeArr.map(r=>r.a),
+      backgroundColor: teamAgeArr.map(r=> r.a>=27.5?"#7a0826":r.a>=26.5?"#c8a25c":"#2f7d4f"), borderRadius:4 }]},
+  options:{indexAxis:"y", responsive:true, maintainAspectRatio:false,
+    plugins:{legend:{display:false}}, scales:{x:{suggestedMin:24, suggestedMax:30}}}
+});
+const LEAGUES = [{l:"England",p:158},{l:"Spain",p:86},{l:"Germany",p:81},{l:"Italy",p:70},{l:"France",p:58},{l:"Saudi Arabia",p:35},{l:"Qatar",p:33},{l:"United States",p:25},{l:"Belgium",p:24},{l:"Mexico",p:23}];
+new Chart(document.getElementById("ch-leagues"), {
+  type:"bar", data:{labels: LEAGUES.map(l=>l.l),
+    datasets:[{ data: LEAGUES.map(l=>l.p), backgroundColor:"#7a0826", borderRadius:4 }]},
+  options:{indexAxis:"y", responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}}}
+});
+
+const teamSelect = document.getElementById("team-select");
+teamSelect.innerHTML = `<option value="ALL">🏆 Tournament Overview (all 32 teams)</option>` +
+  Object.keys(TEAMS).sort().map(t=>`<option value="${t}">${TEAMS[t].flag}  ${t}</option>`).join("");
+
+const overviewView = document.getElementById("overview-view");
+const teamView = document.getElementById("team-view");
+
+teamSelect.addEventListener("change", ()=>{
+  const t = teamSelect.value;
+  if (t === "ALL") { overviewView.classList.remove("hidden"); teamView.classList.add("hidden"); window.scrollTo({top:0, behavior:"smooth"}); }
+  else { overviewView.classList.add("hidden"); teamView.classList.remove("hidden"); renderTeam(t); window.scrollTo({top:0, behavior:"smooth"}); }
+});
+
+let teamPosChart = null;
+function renderTeam(name){
+  const T = TEAMS[name];
+  const sq = TEAM_SQUAD[name];
+  const top5 = TOP5[name] || [];
+  const teamHero = document.getElementById("team-hero");
+  teamHero.style.setProperty("--th-c1", T.c1);
+  teamHero.style.setProperty("--th-c2", T.c2 === "#FFFFFF" ? T.accent : T.c2);
+  const finishLabel = T.finishPlace === 1 ? "🏆 Champion" : T.finishPlace === 2 ? "🥈 Runner-up" :
+                      T.finishPlace === 3 ? "🥉 Third" : T.finishPlace === 4 ? "4th Place" :
+                      T.finishPlace <= 8 ? "Quarter-final" : T.finishPlace <= 16 ? "Round of 16" : "Group Stage";
+  teamHero.innerHTML = `<div class="row">
+    <div class="flag">${T.flag}</div>
+    <div><h2 class="name">${name}</h2>
+      <div class="sub">Group ${T.group} · FIFA World Ranking #${T.rank} · ${T.confederation}</div>
+      <div class="sub" style="margin-top:8px;">Coach: <strong>${T.coach}</strong></div></div>
+    <div class="finish"><div class="place">${T.finishMedal || "#"+T.finishPlace}</div><div class="label">${finishLabel}</div></div>
+  </div>`;
+
+  const captain = top5.find(p=>p.cap);
+  document.getElementById("team-stats").innerHTML = `
+    <div class="team-stat"><div class="l">Captain</div><div class="v">${captain ? captain.p : "—"}</div></div>
+    <div class="team-stat"><div class="l">Coach</div><div class="v">${T.coach}</div></div>
+    <div class="team-stat"><div class="l">Squad size</div><div class="v">${sq.total} players</div></div>
+    <div class="team-stat"><div class="l">Avg age</div><div class="v">${sq.avgAge}</div></div>
+    <div class="team-stat"><div class="l">Foreign-based</div><div class="v">${sq.foreignPct.toFixed(0)}%</div></div>
+    <div class="team-stat"><div class="l">FIFA Rank</div><div class="v">#${T.rank}</div></div>`;
+
+  document.getElementById("team-journey").innerHTML = T.journey.map(g=>`
+    <div class="game ${g.res === 'W' ? 'win' : g.res === 'L' ? 'loss' : 'draw'}">
+      <div class="stage">${g.stage}</div><div class="vs">vs ${g.oppFlag} ${g.opp}</div>
+      <div class="score">${g.gf} – ${g.ga}</div>
+      <div class="res">${g.res === 'W' ? 'Win' : g.res === 'L' ? 'Loss' : 'Draw'}${g.note?` · ${g.note}`:''}</div>
+    </div>`).join("");
+
+  const tbody = document.querySelector("#team-players tbody");
+  tbody.innerHTML = top5.map(p=>`<tr>
+    <td>${p.cap?'<span class="captain-mark" title="Captain">©</span>':''}${p.p}</td>
+    <td><span class="pos-tag ${p.pos}">${p.pos}</span></td>
+    <td class="num">${p.age}</td><td>${p.club}</td>
+    <td class="num">${p.caps}</td><td class="num"><strong>${p.g}</strong></td></tr>`).join("");
+
+  if (teamPosChart) teamPosChart.destroy();
+  teamPosChart = new Chart(document.getElementById("team-pos-chart"), {
+    type:"doughnut", data:{ labels:["Goalkeepers","Defenders","Midfielders","Forwards"],
+      datasets:[{ data:[sq.gk, sq.def, sq.mid, sq.fwd],
+        backgroundColor:["#84621a","#1c537e","#1f5d3b","#7a0826"], borderWidth:3, borderColor:"#fff" }]},
+    options:{responsive:true, maintainAspectRatio:false, cutout:"60%", plugins:{legend:{position:"bottom"}}}
+  });
+
+  document.getElementById("team-achievements").innerHTML = T.achievements.map(a=>
+    `<div class="ach"><div class="h">${a.h}</div><p>${a.p}</p></div>`).join("");
+
+  renderMap(T);
+}
+
+function renderMap(T){
+  const W=600, H=300;
+  const x = (T.lng+180) * (W/360);
+  const y = (90-T.lat) * (H/180);
+  document.getElementById("team-map").innerHTML = `
+    <svg viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg">
+      <rect x="0" y="0" width="${W}" height="${H}" fill="#f6f1e0"/>
+      <g class="continents">
+        <path d="M 80 70 Q 110 50 150 60 Q 180 55 200 80 Q 210 100 200 130 Q 180 160 160 170 Q 130 180 110 170 Q 80 150 70 130 Q 60 100 80 70 Z" fill="#e5dfce"/>
+        <path d="M 280 60 Q 320 50 340 70 Q 360 90 350 110 Q 340 130 350 150 Q 360 200 330 240 Q 300 260 280 240 Q 260 200 270 160 Q 260 110 280 60 Z" fill="#e5dfce"/>
+        <path d="M 360 50 Q 420 40 480 60 Q 530 70 540 90 Q 550 120 520 140 Q 480 150 440 145 Q 400 140 380 130 Q 360 100 360 50 Z" fill="#e5dfce"/>
+        <path d="M 480 200 Q 510 195 530 210 Q 540 225 525 235 Q 505 240 488 230 Q 475 215 480 200 Z" fill="#e5dfce"/>
+        <path d="M 170 180 Q 195 175 205 200 Q 215 230 200 260 Q 185 285 170 280 Q 150 260 155 230 Q 160 200 170 180 Z" fill="#e5dfce"/>
+      </g>
+      <circle cx="${x}" cy="${y}" r="20" class="map-pin-pulse"/>
+      <circle cx="${x}" cy="${y}" r="12" class="map-pin-pulse" style="opacity:.5"/>
+      <circle cx="${x}" cy="${y}" r="6" class="map-pin"/>
+      <text x="${x}" y="${y-18}" text-anchor="middle" font-size="13" font-weight="700" fill="#7a0826">${T.flag} ${T.iso}</text>
+    </svg>`;
+}
+</script>
+</body>
+</html>
